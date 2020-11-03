@@ -1,0 +1,18 @@
+{
+    "name": "object-wrap-demo",
+    "version": "1.0.0",
+    "description": "",
+    "author": "Paul Bowen-Huggett",
+    "license": "ISC",
+    "main": "lib/binding.js",
+    "scripts": {
+        "install": "cmake-js compile",
+        "test": "node --napi-modules ./test/test_binding.js"
+    },
+    "dependencies": {
+        "node-addon-api": "^1.1.0"
+    },
+    "devDependencies": {
+        "cmake-js": "^6.1.0"
+    }
+}
