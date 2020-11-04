@@ -1,16 +1,17 @@
 {
-    "name": "object-wrap-demo",
-    "version": "1.0.0",
-    "description": "",
+    "name": "pstore-js",
+    "version": "0.0.1",
+    "description": "pstore bindings for Node.js",
     "author": "Paul Bowen-Huggett",
     "license": "ISC",
     "main": "lib/binding.js",
     "scripts": {
+        "start": "node lib/show.js",
         "install": "cmake-js compile",
         "test": "node --napi-modules ./test/test_binding.js"
     },
     "dependencies": {
-        "node-addon-api": "^1.1.0"
+        "node-addon-api": "^3.0.0"
     },
     "devDependencies": {
         "cmake-js": "^6.1.0"
