@@ -1,5 +1,5 @@
-#ifndef OBJECT_WRAP_DEMO_H
-#define OBJECT_WRAP_DEMO_H
+#ifndef DATABASE_HPP
+#define DATABASE_HPP
 
 #include <napi.h>
 #include <pstore/core/database.hpp>
@@ -20,4 +20,4 @@ private:
     std::shared_ptr<pstore::database> db_;
 };
 
-#endif // OBJECT_WRAP_DEMO_H
+#endif // DATABASE_HPP
