@@ -23,7 +23,7 @@ jobs:
       with:
         repository: 'paulhuggett/pstore.git'
         path: pstore
-        ref: main
+        ref: cpack
         submodules: recursive
 
     - name: pstore Create Build Environment
