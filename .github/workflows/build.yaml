@@ -9,14 +9,14 @@ permissions:
   contents: read
 
 jobs:
-  install_pstore:
+  install-pstore:
     name: Build pstore
     runs-on: ubuntu-latest
     steps:
     - name: Install ninja
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build
+        sudo apt-get install -y ninja-build cmake
 
     - name: pstore Checkout
       uses: actions/checkout@v4
@@ -42,17 +42,21 @@ jobs:
       shell: bash
       run: cmake --build . --config Release
 
-    - name: pstore Install
+    - name: Build Installer
       working-directory: "${{ runner.workspace }}/pstore-build"
       shell: bash
-      run: sudo cmake --install .
+      run: cpack -C Release --verbose
+
+    - name: Upload
+      uses: actions/upload-artifact@v3
+      with:
+        name: pstore.tgz
+        path: "${{ runner.workspace }}/pstore-build/pstore-1.14.0-.tar.gz"
 
   build:
-    name: Build and Test
+    name: Build Node API interface
     runs-on: ubuntu-latest
-    env:
-      CLANG_VERSION: 15
-
+    needs: install-pstore
     steps:
       - uses: actions/checkout@v4
 
