@@ -23,6 +23,8 @@ namespace {
 
 } // end anonymous namespace
 
+Napi::FunctionReference database::constructor;
+
 database::database (Napi::CallbackInfo const & info)
         : ObjectWrap (info) {
   Napi::Env env = info.Env ();
@@ -36,7 +38,7 @@ database::database (Napi::CallbackInfo const & info)
       Napi::Function ctor = myc::get_class (env);
       constructor = Napi::Persistent (ctor);
       constructor.SuppressDestruct ();
-      target.Set ("Canvas", ctor);
+      // target.Set ("Canvas", ctor);
     }
   });
 }

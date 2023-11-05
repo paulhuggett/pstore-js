@@ -1,0 +1,75 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  install_pstore:
+    name: Build pstore
+    runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: pstore-build
+    steps:
+    - name: Install ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: pstore Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: 'paulhuggett/pstore.git'
+        path: pstore
+        ref: main
+        submodules: recursive
+
+    - name: pstore Create Build Environment
+      run: cmake -E make_directory "${{ runner.workspace }}/${BUILD_DIR}"
+
+    - name: pstore Configure
+      shell: bash
+      run: |
+        cmake -D CMAKE_BUILD_TYPE=Release       \
+              -G Ninja                          \
+              -S ${{ github.workspace }}/pstore \
+              -B ${{ runner.workspace }}/${BUILD_DIR}
+
+    - name: pstore Build
+      working-directory: "${{ runner.workspace }}/${BUILD_DIR}"
+      shell: bash
+      run: cmake --build . --config Release
+
+    - name: pstore Install
+      working-directory: "${{ runner.workspace }}/${BUILD_DIR}"
+      shell: bash
+      run: sudo cmake --install .
+
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    env:
+      CLANG_VERSION: 15
+
+    steps:
+      - uses: actions/checkout@4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+          npm install -g cmake-js
+
+      - name: Build
+        run: |
+          cmake-js --debug
+
+      - name: Build and Test
+        run: |
+          pstore-write --add=key,value db.db
+          ./lib/show.js
+
