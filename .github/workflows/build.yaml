@@ -12,8 +12,6 @@ jobs:
   install_pstore:
     name: Build pstore
     runs-on: ubuntu-latest
-    env:
-      BUILD_DIR: pstore-build
     steps:
     - name: Install ninja
       run: |
@@ -29,7 +27,7 @@ jobs:
         submodules: recursive
 
     - name: pstore Create Build Environment
-      run: cmake -E make_directory "${{ runner.workspace }}/${BUILD_DIR}"
+      run: cmake -E make_directory "${{ runner.workspace }}/pstore-build"
 
     - name: pstore Configure
       shell: bash
@@ -37,15 +35,15 @@ jobs:
         cmake -D CMAKE_BUILD_TYPE=Release       \
               -G Ninja                          \
               -S ${{ github.workspace }}/pstore \
-              -B ${{ runner.workspace }}/${BUILD_DIR}
+              -B ${{ runner.workspace }}/pstore-build
 
     - name: pstore Build
-      working-directory: "${{ runner.workspace }}/${BUILD_DIR}"
+      working-directory: "${{ runner.workspace }}/pstore-build"
       shell: bash
       run: cmake --build . --config Release
 
     - name: pstore Install
-      working-directory: "${{ runner.workspace }}/${BUILD_DIR}"
+      working-directory: "${{ runner.workspace }}/pstore-build"
       shell: bash
       run: sudo cmake --install .
 
