@@ -13,65 +13,65 @@ jobs:
     name: Build pstore
     runs-on: ubuntu-latest
     steps:
-    - name: Get pstore HEAD commit
-      id: get-pstore-head
-      run: |
-        REVISION=$(git ls-remote https://github.com/paulhuggett/pstore HEAD | awk '{ print $1 }')
-        echo "pstore HEAD: $REVISION"
-        echo "commit=$REVISION" >> "$GITHUB_OUTPUT"
+      - name: Get pstore HEAD commit
+        id: get-pstore-head
+        run: |
+          REVISION=$(git ls-remote https://github.com/paulhuggett/pstore HEAD | awk '{ print $1 }')
+          echo "pstore HEAD: $REVISION"
+          echo "commit=$REVISION" >> "$GITHUB_OUTPUT"
 
-    - name: Cache the pstore Build
-      id: cache-pstore-build
-      uses: actions/cache@v3
-      with:
-        key: pstore-${{ runner.os }}-${{ steps.get-pstore-head.outputs.commit }}
-        path: "${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz"
+      - name: Cache the pstore Build
+        id: cache-pstore-build
+        uses: actions/cache@v3
+        with:
+          key: pstore-${{ runner.os }}-${{ steps.get-pstore-head.outputs.commit }}
+          path: "${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz"
 
-    - name: Install ninja
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build cmake
+      - name: Install ninja
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake
 
-    - name: pstore Checkout
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      uses: actions/checkout@v4
-      with:
-        repository: 'paulhuggett/pstore.git'
-        path: pstore
-        ref: main
-        submodules: recursive
+      - name: pstore Checkout
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: 'paulhuggett/pstore.git'
+          path: pstore
+          ref: main
+          submodules: recursive
 
-    - name: Create pstore Build Environment
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      run: cmake -E make_directory "${{ github.workspace }}/build"
+      - name: Create pstore Build Environment
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        run: cmake -E make_directory "${{ github.workspace }}/build"
 
-    - name: pstore Configure
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      shell: bash
-      run: |
-        cmake -D CMAKE_BUILD_TYPE=Release       \
-              -G Ninja                          \
-              -S ${{ github.workspace }}/pstore \
-              -B ${{ github.workspace }}/build
+      - name: pstore Configure
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        shell: bash
+        run: |
+          cmake -D CMAKE_BUILD_TYPE=Release       \
+                -G Ninja                          \
+                -S ${{ github.workspace }}/pstore \
+                -B ${{ github.workspace }}/build
 
-    - name: pstore Build
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      working-directory: "${{ github.workspace }}/build"
-      shell: bash
-      run: cmake --build . --config Release
+      - name: pstore Build
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        working-directory: "${{ github.workspace }}/build"
+        shell: bash
+        run: cmake --build . --config Release
 
-    - name: Build Installer
-      if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      working-directory: "${{ github.workspace }}/build"
-      shell: bash
-      run: cpack -C Release -G TGZ --verbose
+      - name: Build Installer
+        if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
+        working-directory: "${{ github.workspace }}/build"
+        shell: bash
+        run: cpack -C Release -G TGZ --verbose
 
-    - name: Upload
-      uses: actions/upload-artifact@v3
-      with:
-        name: pstore-install
-        path: ${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: pstore-install
+          path: ${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz
 
   build:
     name: Build Node API interface
@@ -85,6 +85,9 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R
+
+      - name: Unpack pstore install
+        run: tar xzvf pstore-1.14.0-Linux.tar.gz
 
       - uses: actions/checkout@v4
 
