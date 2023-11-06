@@ -42,9 +42,6 @@ jobs:
       shell: bash
       run: cmake --build . --config Release
 
-    - name: Dump CPackConfig
-      run: cat /home/runner/work/pstore-js/pstore-build/CPackConfig.cmake
-
     - name: Build Installer
       working-directory: "${{ runner.workspace }}/pstore-build"
       shell: bash
