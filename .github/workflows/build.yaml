@@ -42,9 +42,9 @@ jobs:
         ref: main
         submodules: recursive
 
-    - name: pstore Create Build Environment
+    - name: Create pstore Build Environment
       if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
-      run: cmake -E make_directory "${{ runner.workspace }}/pstore-build"
+      run: cmake -E make_directory "${{ github.workspace }}/build"
 
     - name: pstore Configure
       if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
