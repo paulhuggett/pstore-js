@@ -48,13 +48,13 @@ jobs:
     - name: Build Installer
       working-directory: "${{ runner.workspace }}/pstore-build"
       shell: bash
-      run: cpack -C Release --verbose
+      run: cpack -C Release -G TGZ --verbose
 
     - name: Upload
       uses: actions/upload-artifact@v3
       with:
         name: pstore.tgz
-        path: "${{ runner.workspace }}/pstore-build/pstore-1.14.0-.tar.gz"
+        path: "${{ runner.workspace }}/pstore-build/pstore-1.14.0-.tgz"
 
   build:
     name: Build Node API interface
