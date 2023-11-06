@@ -74,6 +74,9 @@ jobs:
           sudo apt-get install -y cmake ninja-build
           npm install -g cmake-js
 
+      - name: npm update
+        run: npm update
+
       - name: Build
         run: |
           cmake-js --debug
