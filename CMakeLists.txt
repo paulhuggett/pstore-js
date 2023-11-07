@@ -7,8 +7,6 @@ cmake_policy(SET CMP0042 NEW)
 
 project (pstore-native)
 
-option (PSTORE_INSTALL_DIR "pstore installation directory" /usr/local)
-
 add_library (${PROJECT_NAME}
   SHARED
   src/database.hpp
@@ -19,9 +17,6 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 set_target_properties (${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 target_include_directories (${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
 target_link_libraries (${PROJECT_NAME} ${CMAKE_JS_LIB})
-
-target_include_directories (${PROJECT_NAME} PRIVATE ${PSTORE_INSTALL_DIR}/include)
-target_link_directories (${PROJECT_NAME} PRIVATE ${PSTORE_INSTALL_DIR}/lib)
 
 # define NAPI_VERSION
 target_compile_definitions (${PROJECT_NAME} PRIVATE NAPI_VERSION=4)
