@@ -89,14 +89,10 @@ jobs:
         with:
           name: pstore-install
 
-      - name: Display structure of downloaded files
-        run: ls -R
-
-      - name: Unpack pstore install
-        run: tar xzvf pstore-1.14.0-Linux.tar.gz
-
       - name: Copy the pstore install
-        run: sudo rsync -av pstore-1.14.0-Linux/ /usr/local/
+        run: |
+          tar xzvf pstore-1.14.0-Linux.tar.gz
+          sudo rsync -av pstore-1.14.0-Linux/ /usr/local/
 
       - uses: actions/checkout@v4
 
