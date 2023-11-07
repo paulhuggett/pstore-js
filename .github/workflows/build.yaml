@@ -96,7 +96,7 @@ jobs:
         run: tar xzvf pstore-1.14.0-Linux.tar.gz
 
       - name: Copy the pstore install
-        run: sudo rsync -a pstore-1.14.0-Linux/ /usr/
+        run: sudo rsync -av pstore-1.14.0-Linux/ /usr/local/
 
       - uses: actions/checkout@v4
 
