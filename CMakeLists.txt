@@ -39,8 +39,8 @@ target_include_directories (${PROJECT_NAME} PRIVATE ${NODE_ADDON_API_DIR})
 include (${CMAKE_INSTALL_PREFIX}/lib/peejay/peejay.cmake)
 include (${CMAKE_INSTALL_PREFIX}/lib/pstore/pstore.cmake)
 target_link_libraries (${PROJECT_NAME} PRIVATE
-    pstore::pstore-core
-    pstore::pstore-brokerface
+  pstore::pstore-core
+  pstore::pstore-brokerface
 )
 
 if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
