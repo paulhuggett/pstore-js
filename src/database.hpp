@@ -42,6 +42,7 @@ public:
 
   // Returns the number of entries in the index.
   Napi::Value size (Napi::CallbackInfo const & info);
+  Napi::Value iterator (Napi::CallbackInfo const & info);
 
 private:
   void set (std::shared_ptr<pstore::database> const & db,

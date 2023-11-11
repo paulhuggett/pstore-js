@@ -140,10 +140,10 @@ Napi::FunctionReference write_index::constructor;
 
 void write_index::init (Napi::Env env) {
   Napi::HandleScope scope{env};
-  Napi::Function func = DefineClass (env, "WriteIndex",
-                                     {
-                                       write_index::InstanceMethod ("size", &write_index::size),
-                                     });
+  Napi::Function func = DefineClass (env, "WriteIndex", {
+    InstanceMethod ("size", &write_index::size),
+    InstanceMethod (Napi::Symbol::WellKnown(env, "iterator"), &write_index::iterator)
+  });
   constructor = Napi::Persistent (func);
   constructor.SuppressDestruct ();
 }
@@ -165,6 +165,39 @@ Napi::Value write_index::size (Napi::CallbackInfo const & info) {
   Napi::Env env = info.Env ();
   return error_wrap (env, [this, &env] () { return Napi::Number::New (env, index_->size ()); });
 }
+
+// Making a JavaScript object iterable...
+//
+//   const myIterable = {
+//     [Symbol.iterator]: function () {
+//       let count = 1
+//       // An object is an iterator when it implements a next() method which takes
+//       // no arguments and returns an object conforming to the IteratorResult interface.
+//       return {
+//         next: function () {
+//           const result = count++
+//           // Implements the IteratorResult interface
+//           return { value: result, done: result > 3 }
+//         }
+//       }
+//     }
+//   }
+//   for (const value of myIterable) {
+//     console.log(value)
+//   }
+//   console.log([...myIterable])
+//
+// Produces:
+//
+//   1
+//   2
+//   3
+//   [ 1, 2, 3 ]
+
+Napi::Value write_index::iterator (Napi::CallbackInfo const & info) {
+  return Napi::Object::New(info.Env ());
+}
+
 
 // ====-----------------------------------------------====
 
