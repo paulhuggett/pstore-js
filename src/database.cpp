@@ -41,16 +41,14 @@ namespace {
 } // end anonymous namespace
 
 Napi::Object database::init (Napi::Env env, Napi::Object exports) {
-  Napi::Function constructor =
-    DefineClass (env, "Database",
-                 {
-                   database::InstanceMethod ("index", &database::index),
-                   database::InstanceMethod ("id", &database::id),
-                   database::InstanceMethod ("path", &database::path),
-                   database::InstanceMethod ("revision", &database::revision),
-                   database::InstanceMethod ("size", &database::size),
-                   database::InstanceMethod ("sync", &database::sync),
-                 });
+  Napi::Function constructor = DefineClass (env, "Database", {
+    database::InstanceMethod ("index", &database::index),
+    database::InstanceMethod ("id", &database::id),
+    database::InstanceMethod ("path", &database::path),
+    database::InstanceMethod ("revision", &database::revision),
+    database::InstanceMethod ("size", &database::size),
+    database::InstanceMethod ("sync", &database::sync),
+  });
   exports.Set (Napi::String::New (env, "Database"), constructor);
   return exports;
 }
@@ -114,7 +112,6 @@ Napi::Value database::sync (Napi::CallbackInfo const & info) {
     } else {
       revision = static_cast<pstore::revision_number> (v);
     }
-
     db_->sync (revision);
     return Napi::Number::New (env, db_->get_current_revision ());
   });
@@ -134,9 +131,79 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
   //   throw Napi::TypeError::New (env, "Unknown index");
 }
 
+
 // ====-----------------------------------------------====
 
-Napi::FunctionReference write_index::constructor;
+class index_iterator final : public Napi::ObjectWrap<index_iterator> {
+public:
+  explicit index_iterator (Napi::CallbackInfo const & info)
+          : ObjectWrap (info) {}
+  static Napi::Value new_instance (Napi::CallbackInfo const & info,
+                                   std::shared_ptr<pstore::database> const & db,
+                                   std::shared_ptr<pstore::index::write_index> const & index);
+  static void init (Napi::Env env);
+  Napi::Value next (Napi::CallbackInfo const & info);
+
+private:
+  static Napi::FunctionReference constructor_;
+  std::shared_ptr<pstore::database> db_;
+  std::shared_ptr<pstore::index::write_index> index_;
+  std::unique_ptr<pstore::index::write_index::iterator> it_;
+
+  static Napi::Value key_value_pair (Napi::Env env,
+                                     pstore::index::write_index::iterator const & pos);
+};
+
+Napi::FunctionReference index_iterator::constructor_;
+
+Napi::Value
+index_iterator::new_instance (Napi::CallbackInfo const & info,
+                              std::shared_ptr<pstore::database> const & db,
+                              std::shared_ptr<pstore::index::write_index> const & index) {
+
+  Napi::Object obj = constructor_.New ({});
+  index_iterator * const result = Unwrap (obj);
+  result->db_ = db;
+  result->index_ = index;
+  result->it_ = std::make_unique<pstore::index::write_index::iterator> (index->begin (*db));
+  return obj;
+}
+
+void index_iterator::init (Napi::Env env) {
+  Napi::HandleScope scope{env};
+  Napi::Function func = DefineClass (env, "IndexIterator",
+                                     {
+                                       InstanceMethod ("next", &index_iterator::next),
+                                     });
+  constructor_ = Napi::Persistent (func);
+  constructor_.SuppressDestruct ();
+}
+
+Napi::Value index_iterator::key_value_pair (Napi::Env env,
+                                            pstore::index::write_index::iterator const & pos) {
+  auto entry = Napi::Array::New (env, std::size_t{2});
+  entry.Set (uint32_t{0}, pos->first);
+  entry.Set (uint32_t{1}, "value");
+  return entry;
+}
+
+// Produces an "IteratorResult". That is,
+//     return { value: *it, done: it==end }
+Napi::Value index_iterator::next (Napi::CallbackInfo const & info) {
+  auto env = info.Env ();
+
+  Napi::Object iterator_result = Napi::Object::New (env);
+  auto const done = *it_ == index_->end (*db_);
+  iterator_result.Set ("done", done);
+  iterator_result.Set ("value", done ? env.Null () : key_value_pair (env, (*it_)++));
+  return iterator_result;
+}
+
+
+
+// ====-----------------------------------------------====
+
+Napi::FunctionReference write_index::constructor_;
 
 void write_index::init (Napi::Env env) {
   Napi::HandleScope scope{env};
@@ -144,8 +211,8 @@ void write_index::init (Napi::Env env) {
     InstanceMethod ("size", &write_index::size),
     InstanceMethod (Napi::Symbol::WellKnown(env, "iterator"), &write_index::iterator)
   });
-  constructor = Napi::Persistent (func);
-  constructor.SuppressDestruct ();
+  constructor_ = Napi::Persistent (func);
+  constructor_.SuppressDestruct ();
 }
 
 Napi::Value write_index::new_instance (Napi::CallbackInfo const & info,
@@ -155,14 +222,17 @@ Napi::Value write_index::new_instance (Napi::CallbackInfo const & info,
   if (!index) {
     return info.Env ().Null ();
   }
-  Napi::Object obj = write_index::constructor.New ({});
-  write_index * const wi = write_index::Unwrap (obj);
+  Napi::Object obj = constructor_.New ({});
+  write_index * const wi = Unwrap (obj);
   wi->set (db, index);
   return obj;
 }
 
 Napi::Value write_index::size (Napi::CallbackInfo const & info) {
   Napi::Env env = info.Env ();
+  if (info.Length () != 0) {
+    throw Napi::TypeError::New (env, "wrong number of arguments");
+  }
   return error_wrap (env, [this, &env] () { return Napi::Number::New (env, index_->size ()); });
 }
 
@@ -193,9 +263,11 @@ Napi::Value write_index::size (Napi::CallbackInfo const & info) {
 //   2
 //   3
 //   [ 1, 2, 3 ]
+//
+// That's what we need to implement here...
 
 Napi::Value write_index::iterator (Napi::CallbackInfo const & info) {
-  return Napi::Object::New(info.Env ());
+  return index_iterator::new_instance (info, db_, index_);
 }
 
 
@@ -204,6 +276,7 @@ Napi::Value write_index::iterator (Napi::CallbackInfo const & info) {
 Napi::Object init (Napi::Env env, Napi::Object exports) {
   exports = database::init (env, exports);
   write_index::init (env);
+  index_iterator::init (env);
   return exports;
 }
 NODE_API_MODULE (addon, init)

@@ -34,7 +34,7 @@ private:
 
 class write_index : public Napi::ObjectWrap<write_index> {
 public:
-  write_index (Napi::CallbackInfo const & info)
+  explicit write_index (Napi::CallbackInfo const & info)
           : ObjectWrap (info) {}
   static Napi::Value new_instance (Napi::CallbackInfo const & info,
                                    std::shared_ptr<pstore::database> const & db, bool create);
@@ -50,7 +50,7 @@ private:
     db_ = db;
     index_ = index;
   }
-  static Napi::FunctionReference constructor;
+  static Napi::FunctionReference constructor_;
   std::shared_ptr<pstore::database> db_;
   std::shared_ptr<pstore::index::write_index> index_;
 };
