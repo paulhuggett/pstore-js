@@ -106,6 +106,7 @@ jobs:
 
       - name: Build and Test
         run: |
-          pstore-write --add=key,value db.db
+          pstore-write --add=key1,value1 db.db
+          pstore-write --add=key2,value2 db.db
           ./lib/show.js
 
