@@ -42,12 +42,12 @@ namespace {
 
 Napi::Object database::init (Napi::Env env, Napi::Object exports) {
   Napi::Function constructor = DefineClass (env, "Database", {
-    database::InstanceMethod ("index", &database::index),
-    database::InstanceMethod ("id", &database::id),
-    database::InstanceMethod ("path", &database::path),
-    database::InstanceMethod ("revision", &database::revision),
-    database::InstanceMethod ("size", &database::size),
-    database::InstanceMethod ("sync", &database::sync),
+    InstanceMethod ("index", &database::index),
+    InstanceMethod ("id", &database::id),
+    InstanceMethod ("path", &database::path),
+    InstanceMethod ("revision", &database::revision),
+    InstanceMethod ("size", &database::size),
+    InstanceMethod ("sync", &database::sync),
   });
   exports.Set (Napi::String::New (env, "Database"), constructor);
   return exports;
@@ -134,6 +134,35 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
 
 // ====-----------------------------------------------====
 
+// Making a JavaScript object iterable...
+//
+//   const myIterable = {
+//     [Symbol.iterator]: function () {
+//       let count = 1
+//       // An object is an iterator when it implements a next() method which takes
+//       // no arguments and returns an object conforming to the IteratorResult interface.
+//       return {
+//         next: function () {
+//           const result = count++
+//           // Implements the IteratorResult interface
+//           return { value: result, done: result > 3 }
+//         }
+//       }
+//     }
+//   }
+//   for (const value of myIterable) {
+//     console.log(value)
+//   }
+//   console.log([...myIterable])
+//
+// Produces:
+//
+//   1
+//   2
+//   3
+//   [ 1, 2, 3 ]
+//
+// That's what this class is for...
 class index_iterator final : public Napi::ObjectWrap<index_iterator> {
 public:
   explicit index_iterator (Napi::CallbackInfo const & info)
@@ -171,10 +200,9 @@ index_iterator::new_instance (Napi::CallbackInfo const & info,
 
 void index_iterator::init (Napi::Env env) {
   Napi::HandleScope scope{env};
-  Napi::Function func = DefineClass (env, "IndexIterator",
-                                     {
-                                       InstanceMethod ("next", &index_iterator::next),
-                                     });
+  Napi::Function func = DefineClass (env, "IndexIterator", {
+    InstanceMethod ("next", &index_iterator::next),
+  });
   constructor_ = Napi::Persistent (func);
   constructor_.SuppressDestruct ();
 }
@@ -183,7 +211,12 @@ Napi::Value index_iterator::key_value_pair (Napi::Env env,
                                             pstore::index::write_index::iterator const & pos) {
   auto entry = Napi::Array::New (env, std::size_t{2});
   entry.Set (uint32_t{0}, pos->first);
-  entry.Set (uint32_t{1}, "value");
+
+  auto v = Napi::Object::New (env);
+  v.Set ("addr", pos->second.addr.absolute());
+  v.Set ("size", pos->second.size);
+  entry.Set (uint32_t{1}, v);
+
   return entry;
 }
 
@@ -235,36 +268,6 @@ Napi::Value write_index::size (Napi::CallbackInfo const & info) {
   }
   return error_wrap (env, [this, &env] () { return Napi::Number::New (env, index_->size ()); });
 }
-
-// Making a JavaScript object iterable...
-//
-//   const myIterable = {
-//     [Symbol.iterator]: function () {
-//       let count = 1
-//       // An object is an iterator when it implements a next() method which takes
-//       // no arguments and returns an object conforming to the IteratorResult interface.
-//       return {
-//         next: function () {
-//           const result = count++
-//           // Implements the IteratorResult interface
-//           return { value: result, done: result > 3 }
-//         }
-//       }
-//     }
-//   }
-//   for (const value of myIterable) {
-//     console.log(value)
-//   }
-//   console.log([...myIterable])
-//
-// Produces:
-//
-//   1
-//   2
-//   3
-//   [ 1, 2, 3 ]
-//
-// That's what we need to implement here...
 
 Napi::Value write_index::iterator (Napi::CallbackInfo const & info) {
   return index_iterator::new_instance (info, db_, index_);
