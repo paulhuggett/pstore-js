@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+//#define NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
 #include <napi.h>
 
 #include <pstore/core/database.hpp>
@@ -14,9 +15,13 @@ public:
   explicit database (Napi::CallbackInfo const & info);
   static Napi::Object init (Napi::Env env, Napi::Object exports);
 
+  // get(addr,size)
+  // Returns a buffer containing the data at the extent given by addr,size.
+  Napi::Value get (Napi::CallbackInfo const & info);
   Napi::Value id (Napi::CallbackInfo const & info);
   Napi::Value path (Napi::CallbackInfo const & info);
   Napi::Value size (Napi::CallbackInfo const & info);
+  // revision()
   // Returns the revision to which the database is currently synched.
   Napi::Value revision (Napi::CallbackInfo const & info);
 

@@ -24,12 +24,13 @@ namespace {
   }
 
   std::int64_t as_int64 (Napi::Env env, Napi::Value const & value) {
-    auto const d = value.As<Napi::Number> ().DoubleValue ();
+    auto const n = value.As<Napi::Number> ();
+    auto const d = n.DoubleValue ();
     if (std::isnan (d) || std::isinf (d) || d < std::numeric_limits<std::int64_t>::min () ||
         d > std::numeric_limits<std::int64_t>::max ()) {
       throw Napi::TypeError::New (env, "An integer was expected");
     }
-    return value.As<Napi::Number> ().Int64Value ();
+    return n.Int64Value ();
   }
 
   void check_number_of_arguments (Napi::CallbackInfo const & info, unsigned const expected) {
@@ -42,8 +43,9 @@ namespace {
 
 Napi::Object database::init (Napi::Env env, Napi::Object exports) {
   Napi::Function constructor = DefineClass (env, "Database", {
-    InstanceMethod ("index", &database::index),
+    InstanceMethod ("get", &database::get),
     InstanceMethod ("id", &database::id),
+    InstanceMethod ("index", &database::index),
     InstanceMethod ("path", &database::path),
     InstanceMethod ("revision", &database::revision),
     InstanceMethod ("size", &database::size),
@@ -60,6 +62,21 @@ database::database (Napi::CallbackInfo const & info)
   error_wrap (env, [this, &env, &info] () {
     auto const path = info[0].As<Napi::String> ().Utf8Value ();
     db_ = std::make_shared<pstore::database> (path, pstore::database::access_mode::read_only);
+  });
+}
+
+Napi::Value database::get (Napi::CallbackInfo const & info) {
+  Napi::Env env = info.Env ();
+  return error_wrap (env, [this, &info, &env] () {
+    check_number_of_arguments (info, 2U);
+    // TODO: allow for an extent object as well.
+    auto const addr = as_int64 (env, info[0]);
+    auto const size = as_int64 (env, info[1]);
+    if (addr < 0 || size < 0) {
+      // raise an error
+    }
+    std::shared_ptr<void const> data = db_->getro (static_cast<pstore::address> (addr), static_cast<std::size_t> (size));
+    return Napi::Buffer<std::uint8_t>::Copy (env, reinterpret_cast<std::uint8_t const *> (data.get ()), static_cast<std::size_t> (size));
   });
 }
 
