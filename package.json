@@ -5,6 +5,7 @@
   "author": "Paul Bowen-Huggett",
   "license": "ISC",
   "main": "lib/binding.js",
+  "type": "module",
   "scripts": {
     "start": "node lib/show.js",
     "install": "cmake-js --debug compile",
