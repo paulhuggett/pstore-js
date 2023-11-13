@@ -15,9 +15,11 @@ public:
   explicit database (Napi::CallbackInfo const & info);
   static Napi::Object init (Napi::Env env, Napi::Object exports);
 
-  // get(addr,size)
+  // get(addr,size)/get(extent)
   // Returns a buffer containing the data at the extent given by addr,size.
   Napi::Value get (Napi::CallbackInfo const & info);
+  // id()
+  // Returns the database UUID.
   Napi::Value id (Napi::CallbackInfo const & info);
   Napi::Value path (Napi::CallbackInfo const & info);
   Napi::Value size (Napi::CallbackInfo const & info);
@@ -34,6 +36,10 @@ public:
   Napi::Value index (Napi::CallbackInfo const & info);
 
 private:
+  Napi::Value get (Napi::Env env, int64_t addr, int64_t size);
+  Napi::Value get (Napi::Env env, Napi::Value addr, Napi::Value size);
+  Napi::Value get (Napi::Env env, Napi::Object extent);
+
   std::shared_ptr<pstore::database> db_;
 };
 
