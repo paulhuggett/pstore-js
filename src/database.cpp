@@ -13,7 +13,7 @@ namespace {
   template <typename Function, typename... Args>
   decltype (auto) error_wrap (Napi::Env env, Function function, Args &&... args) {
     try {
-      return function (std::forward<Args> (args)...);
+        return function (env, std::forward<Args> (args)...);
     } catch (Napi::Error const &) {
       throw;
     } catch (std::exception const & ex) {
@@ -36,6 +36,13 @@ namespace {
     return n.Int64Value ();
   }
 
+  bool as_bool (Napi::Env env, Napi::Value const & value) {
+    if (!value.IsBoolean ()) {
+      throw Napi::TypeError::New (env, "A boolean was expected");
+    }
+    return value.As<Napi::Boolean> ().Value ();
+  }
+
 } // end anonymous namespace
 
 //*     _      _        _                   *
@@ -48,9 +55,11 @@ namespace {
 database::database (Napi::CallbackInfo const & info)
         : ObjectWrap (info) {
   assert (info.IsConstructCall ());
-  Napi::Env env = info.Env ();
-  error_wrap (env, [this, &env, &info] () {
-    auto const path = info[0].As<Napi::String> ().Utf8Value ();
+  error_wrap (info.Env (), [this, &info] (Napi::Env & env) {
+    if (info.Length () != 1) {
+      throw Napi::TypeError::New (env, "wrong number of arguments");
+    }
+    auto const path = info[0].ToString().Utf8Value ();
     db_ = std::make_shared<pstore::database> (path, pstore::database::access_mode::read_only);
   });
 }
@@ -58,7 +67,7 @@ database::database (Napi::CallbackInfo const & info)
 // init
 // ~~~~
 Napi::Object database::init (Napi::Env env, Napi::Object exports) {
-  Napi::Function constructor = DefineClass (env, "Database", {
+  exports.Set (Napi::String::New (env, "Database"), DefineClass (env, "Database", {
     InstanceMethod ("get", &database::get),
     InstanceMethod ("id", &database::id),
     InstanceMethod ("index", &database::index),
@@ -66,8 +75,7 @@ Napi::Object database::init (Napi::Env env, Napi::Object exports) {
     InstanceMethod ("revision", &database::revision),
     InstanceMethod ("size", &database::size),
     InstanceMethod ("sync", &database::sync),
-  });
-  exports.Set (Napi::String::New (env, "Database"), constructor);
+  }));
   return exports;
 }
 
@@ -92,8 +100,7 @@ Napi::Value database::get (Napi::Env env, Napi::Object extent) {
   return this->get (env, as_int64 (env, extent.Get ("addr")), as_int64 (env, extent.Get ("size")));
 }
 Napi::Value database::get (Napi::CallbackInfo const & info) {
-  Napi::Env env = info.Env ();
-  return error_wrap (env, [this, &info, &env] () {
+  return error_wrap (info.Env (), [this, &info] (Napi::Env & env) {
     switch (info.Length ()) {
     case 1:
       if (!info[0].IsObject ()) {
@@ -109,11 +116,10 @@ Napi::Value database::get (Napi::CallbackInfo const & info) {
 // size
 // ~~~~
 Napi::Value database::size (Napi::CallbackInfo const & info) {
-  Napi::Env env = info.Env ();
   if (info.Length () != 0) {
-    throw Napi::TypeError::New (env, "wrong number of arguments");
+    throw Napi::TypeError::New (info.Env (), "wrong number of arguments");
   }
-  return error_wrap (env, [this, &env] () { return Napi::Number::New (env, db_->size ()); });
+  return error_wrap (info.Env (), [this] (Napi::Env & env) { return Napi::Number::New (env, db_->size ()); });
 }
 
 // id
@@ -121,20 +127,19 @@ Napi::Value database::size (Napi::CallbackInfo const & info) {
 Napi::Value database::id (Napi::CallbackInfo const & info) {
   Napi::Env env = info.Env ();
   if (info.Length () != 0) {
-    throw Napi::TypeError::New (env, "wrong number of arguments");
+    throw Napi::TypeError::New (info.Env (), "wrong number of arguments");
   }
   return error_wrap (
-    env, [this, &env] () { return Napi::String::New (env, db_->get_header ().id ().str ()); });
+                     info.Env (), [this] (Napi::Env & env) { return Napi::String::New (env, db_->get_header ().id ().str ()); });
 }
 
 // path
 // ~~~~
 Napi::Value database::path (Napi::CallbackInfo const & info) {
-  Napi::Env env = info.Env ();
   if (info.Length () != 0) {
-    throw Napi::TypeError::New (env, "wrong number of arguments");
+    throw Napi::TypeError::New (info.Env (), "wrong number of arguments");
   }
-  return error_wrap (env, [this, &env] () { return Napi::String::New (env, db_->path ()); });
+  return error_wrap (info.Env (), [this] (Napi::Env & env) { return Napi::String::New (env, db_->path ()); });
 }
 
 // revision
@@ -144,15 +149,13 @@ Napi::Value database::revision (Napi::CallbackInfo const & info) {
   if (info.Length () != 0) {
     throw Napi::TypeError::New (env, "wrong number of arguments");
   }
-  return error_wrap (
-    env, [this, &env] () { return Napi::Number::New (env, db_->get_current_revision ()); });
+  return error_wrap (env, [this] (Napi::Env & env) { return Napi::Number::New (env, db_->get_current_revision ()); });
 }
 
 // sync
 // ~~~~
 Napi::Value database::sync (Napi::CallbackInfo const & info) {
-  Napi::Env env = info.Env ();
-  return error_wrap (env, [this, &info, &env] () {
+  return error_wrap (info.Env (), [this, &info] (Napi::Env & env) {
     if (info.Length () != 1U) {
       throw Napi::TypeError::New (info.Env (), "wrong number of arguments");
     }
@@ -180,12 +183,12 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
   if (num_arguments < 1 || num_arguments > 2) {
     throw Napi::TypeError::New (env, "wrong number of arguments");
   }
-  std::string const name = info[0].As<Napi::String> ().Utf8Value ();
-  bool const create = num_arguments == 2 ? info[1].As<Napi::Boolean> ().Value () : true;
-  //  if (name == "write") {
-  return write_index::new_instance (info, db_, create);
-  // else
-  //   throw Napi::TypeError::New (env, "Unknown index");
+  std::string const name = info[0].ToString().Utf8Value ();
+  bool const create = num_arguments == 2 ? as_bool (env, info[1]) : true;
+  if (name == "write") {
+    return write_index::new_instance (info, db_, create);
+  }
+  throw Napi::TypeError::New (env, "Unknown index");
 }
 
 
@@ -196,7 +199,7 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
 //* | | ' \/ _` / -_) \ / | |  _/ -_) '_/ _` |  _/ _ \ '_| *
 //* |_|_||_\__,_\___/_\_\ |_|\__\___|_| \__,_|\__\___/_|   *
 //*                                                        *
-// Making a JavaScript object iterable...
+// Making a JavaScript object iterable looks something like...
 //
 //   const myIterable = {
 //     [Symbol.iterator]: function () {
@@ -217,7 +220,7 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
 //   }
 //   console.log([...myIterable])
 //
-// Produces:
+// This will produce:
 //
 //   1
 //   2
@@ -227,22 +230,23 @@ Napi::Value database::index (Napi::CallbackInfo const & info) {
 // That's what this class is for...
 class index_iterator final : public Napi::ObjectWrap<index_iterator> {
 public:
+  using index_type = pstore::index::write_index;
   explicit index_iterator (Napi::CallbackInfo const & info)
           : ObjectWrap (info) {}
   static Napi::Value new_instance (Napi::CallbackInfo const & info,
                                    std::shared_ptr<pstore::database> const & db,
-                                   std::shared_ptr<pstore::index::write_index> const & index);
+                                   std::shared_ptr<index_type> const & index);
   static void init (Napi::Env env);
   Napi::Value next (Napi::CallbackInfo const & info);
 
 private:
   static Napi::FunctionReference constructor_;
   std::shared_ptr<pstore::database> db_;
-  std::shared_ptr<pstore::index::write_index> index_;
-  std::unique_ptr<pstore::index::write_index::iterator> it_;
+  std::shared_ptr<index_type> index_;
+  std::unique_ptr<index_type::iterator> it_;
 
   static Napi::Value key_value_pair (Napi::Env env,
-                                     pstore::index::write_index::iterator const & pos);
+                                     index_type::iterator const & pos);
 };
 
 Napi::FunctionReference index_iterator::constructor_;
@@ -250,35 +254,33 @@ Napi::FunctionReference index_iterator::constructor_;
 Napi::Value
 index_iterator::new_instance (Napi::CallbackInfo const & info,
                               std::shared_ptr<pstore::database> const & db,
-                              std::shared_ptr<pstore::index::write_index> const & index) {
+                              std::shared_ptr<index_type> const & index) {
 
   Napi::Object obj = constructor_.New ({});
   index_iterator * const result = Unwrap (obj);
   result->db_ = db;
   result->index_ = index;
-  result->it_ = std::make_unique<pstore::index::write_index::iterator> (index->begin (*db));
+  result->it_ = std::make_unique<index_type::iterator> (index->begin (*db));
   return obj;
 }
 
 void index_iterator::init (Napi::Env env) {
   Napi::HandleScope scope{env};
-  Napi::Function func = DefineClass (env, "IndexIterator", {
+  constructor_ = Persistent (DefineClass (env, "IndexIterator", {
     InstanceMethod ("next", &index_iterator::next),
-  });
-  constructor_ = Napi::Persistent (func);
+  }));
   constructor_.SuppressDestruct ();
 }
 
 Napi::Value index_iterator::key_value_pair (Napi::Env env,
-                                            pstore::index::write_index::iterator const & pos) {
+                                            index_type::iterator const & pos) {
+  auto value = Napi::Object::New (env);
+  value.Set ("addr", pos->second.addr.absolute());
+  value.Set ("size", pos->second.size);
+
   auto entry = Napi::Array::New (env, std::size_t{2});
   entry.Set (uint32_t{0}, pos->first);
-
-  auto v = Napi::Object::New (env);
-  v.Set ("addr", pos->second.addr.absolute());
-  v.Set ("size", pos->second.size);
-  entry.Set (uint32_t{1}, v);
-
+  entry.Set (uint32_t{1}, value);
   return entry;
 }
 
@@ -295,8 +297,6 @@ Napi::Value index_iterator::next (Napi::CallbackInfo const & info) {
 }
 
 
-
-// ====-----------------------------------------------====
 //*             _ _         _         _          *
 //* __ __ ___ _(_) |_ ___  (_)_ _  __| |_____ __ *
 //* \ V  V / '_| |  _/ -_) | | ' \/ _` / -_) \ / *
@@ -328,11 +328,10 @@ Napi::Value write_index::new_instance (Napi::CallbackInfo const & info,
 }
 
 Napi::Value write_index::size (Napi::CallbackInfo const & info) {
-  Napi::Env env = info.Env ();
   if (info.Length () != 0) {
-    throw Napi::TypeError::New (env, "wrong number of arguments");
+    throw Napi::TypeError::New (info.Env (), "wrong number of arguments");
   }
-  return error_wrap (env, [this, &env] () { return Napi::Number::New (env, index_->size ()); });
+  return error_wrap (info.Env (), [this] (Napi::Env & env) { return Napi::Number::New (env, index_->size ()); });
 }
 
 Napi::Value write_index::iterator (Napi::CallbackInfo const & info) {
