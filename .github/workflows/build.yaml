@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: pstore-install
-          path: ${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz
+          path: ${{ github.workspace }}/build/pstore-0.1.0-Linux.tar.gz
 
   build:
     name: Build Node API interface
