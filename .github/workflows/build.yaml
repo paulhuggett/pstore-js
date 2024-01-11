@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache@v3
         with:
           key: pstore-${{ runner.os }}-${{ steps.get-pstore-head.outputs.commit }}
-          path: "${{ github.workspace }}/build/pstore-1.14.0-Linux.tar.gz"
+          path: "${{ github.workspace }}/build/pstore-0.1.0-Linux.tar.gz"
 
       - name: Install ninja
         if: ${{ steps.cache-pstore-build.outputs.cache-hit != 'true' }}
@@ -92,8 +92,8 @@ jobs:
 
       - name: Copy the pstore install
         run: |
-          tar xzvf pstore-1.14.0-Linux.tar.gz
-          sudo rsync -av pstore-1.14.0-Linux/ /usr/local/
+          tar xzvf pstore-0.1.0-Linux.tar.gz
+          sudo rsync -av pstore-0.1.0-Linux/ /usr/local/
 
       - uses: actions/checkout@v4
 
