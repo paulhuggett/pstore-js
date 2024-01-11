@@ -21,7 +21,12 @@ public:
   // id()
   // Returns the database UUID.
   Napi::Value id (Napi::CallbackInfo const & info);
+  // path()
+  // Returns the path of the database store file.
   Napi::Value path (Napi::CallbackInfo const & info);
+  // size()
+  // Returns the logical size in bytes of the database store file. Note that,
+  // on some platforms, this may be less than the physical size of the file.
   Napi::Value size (Napi::CallbackInfo const & info);
   // revision()
   // Returns the revision to which the database is currently synched.
